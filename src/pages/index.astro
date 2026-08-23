@@ -1,0 +1,311 @@
+---
+import Base from "../layouts/Base.astro";
+import StatTile from "../components/StatTile.astro";
+import jcas from "../data/jcas.json";
+
+const total = jcas.length;
+const counts = { Ongoing: 0, Completed: 0, Discontinued: 0 };
+for (const j of jcas) counts[j.status] = (counts[j.status] ?? 0) + 1;
+
+const allCountries = Array.from(
+  new Set(jcas.flatMap((j) => [j.assessor_country, j.coassessor_country]).filter(Boolean))
+).sort();
+const allStatuses = Object.keys(counts).filter((k) => counts[k] > 0);
+const allSubstances = Array.from(new Set(jcas.map((j) => j.substance_type).filter(Boolean))).sort();
+
+function primaryLink(j) {
+  return j.link_jca_report || j.link_ema_product_info || j.link_union_register || j.links_relevant_documents || null;
+}
+---
+
+<Base title="Dashboard">
+  <section class="hero">
+    <h1>EU Joint Clinical Assessment Tracker</h1>
+    <p class="lede">
+      An easier way to browse ongoing, completed, and discontinued Joint Clinical Assessments (JCAs) under EU
+      HTA Regulation 2021/2282 — built from the European Commission's public{" "}
+      <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">JCA tracker Excel file</a>.
+    </p>
+  </section>
+
+  <section class="stat-row">
+    <StatTile label="Total JCAs tracked" value={total} />
+    <StatTile label="Ongoing" value={counts.Ongoing ?? 0} accentVar="var(--series-1)" />
+    <StatTile label="Completed" value={counts.Completed ?? 0} accentVar="var(--series-3)" />
+    <StatTile label="Discontinued" value={counts.Discontinued ?? 0} accentVar="var(--series-2)" />
+  </section>
+
+  <section class="table-section">
+    <div class="table-header">
+      <h2>All JCAs</h2>
+      <div class="controls">
+        <input type="search" id="search" placeholder="Search medicine, indication, country…" aria-label="Search JCAs" />
+        <select id="status-filter" aria-label="Filter by status">
+          <option value="">All statuses</option>
+          {allStatuses.map((s) => <option value={s}>{s}</option>)}
+        </select>
+        <select id="substance-filter" aria-label="Filter by substance type">
+          <option value="">All substance types</option>
+          {allSubstances.map((s) => <option value={s}>{s}</option>)}
+        </select>
+        <select id="country-filter" aria-label="Filter by country">
+          <option value="">All countries</option>
+          {allCountries.map((c) => <option value={c}>{c}</option>)}
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="jca-table">
+        <thead>
+          <tr>
+            <th class="col-medicine">Medicine</th>
+            <th class="col-indication">Indication</th>
+            <th class="col-status">Status</th>
+            <th class="col-substance">Substance</th>
+            <th class="col-country">Assessor</th>
+            <th class="col-country">Co-assessor</th>
+            <th class="col-date">EMA validation</th>
+            <th class="col-link">Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          {jcas.map((j) => {
+            const link = primaryLink(j);
+            return (
+              <tr
+                data-status={j.status}
+                data-substance={j.substance_type ?? ""}
+                data-country={`${j.assessor_country ?? ""}|${j.coassessor_country ?? ""}`}
+                data-search={`${j.medicine_name ?? ""} ${j.inn ?? ""} ${j.indication ?? ""} ${j.assessor_country ?? ""} ${j.coassessor_country ?? ""}`.toLowerCase()}
+              >
+                <td class="col-medicine"><a href={`${import.meta.env.BASE_URL}jca/${j.slug}/`}>{j.medicine_name ?? j.inn ?? "—"}</a></td>
+                <td class="col-indication">{j.indication ?? "—"}</td>
+                <td class="col-status"><span class={`status-pill status-${j.status.toLowerCase()}`}>{j.status}</span></td>
+                <td class="col-substance">{j.substance_type ?? "—"}</td>
+                <td class="col-country">{j.assessor_country ?? "—"}</td>
+                <td class="col-country">{j.coassessor_country ?? "—"}</td>
+                <td class="col-date">{j.date_ema_validation ?? "—"}</td>
+                <td class="col-link">{link ? <a href={link} target="_blank" rel="noopener">↗</a> : "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p id="no-results" hidden>No JCAs match your filters.</p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  const search = document.getElementById("search");
+  const statusFilter = document.getElementById("status-filter");
+  const substanceFilter = document.getElementById("substance-filter");
+  const countryFilter = document.getElementById("country-filter");
+  const rows = Array.from(document.querySelectorAll("#jca-table tbody tr"));
+  const noResults = document.getElementById("no-results");
+
+  function applyFilters() {
+    const q = search.value.trim().toLowerCase();
+    const status = statusFilter.value;
+    const substance = substanceFilter.value;
+    const country = countryFilter.value;
+
+    let visible = 0;
+    for (const row of rows) {
+      const matchesSearch = !q || row.dataset.search.includes(q);
+      const matchesStatus = !status || row.dataset.status === status;
+      const matchesSubstance = !substance || row.dataset.substance === substance;
+      const matchesCountry = !country || row.dataset.country.split("|").includes(country);
+      const show = matchesSearch && matchesStatus && matchesSubstance && matchesCountry;
+      row.hidden = !show;
+      if (show) visible++;
+    }
+    noResults.hidden = visible !== 0;
+  }
+
+  search.addEventListener("input", applyFilters);
+  statusFilter.addEventListener("change", applyFilters);
+  substanceFilter.addEventListener("change", applyFilters);
+  countryFilter.addEventListener("change", applyFilters);
+</script>
+
+<style>
+  .hero {
+    margin-bottom: 32px;
+  }
+
+  .hero h1 {
+    font-size: 28px;
+    margin: 0 0 12px;
+  }
+
+  .lede {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 640px;
+    margin: 0;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  @media (max-width: 720px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .table-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .table-section h2 {
+    font-size: 18px;
+    margin: 0 0 12px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .controls input,
+  .controls select {
+    font: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-card);
+    color: var(--text-primary);
+  }
+
+  .controls input {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .table-wrap {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    min-width: 920px;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gridline);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .col-medicine {
+    width: 150px;
+  }
+
+  .col-indication {
+    width: 30%;
+    color: var(--text-secondary);
+  }
+
+  .col-status {
+    width: 110px;
+  }
+
+  .col-substance {
+    width: 100px;
+  }
+
+  .col-country {
+    width: 110px;
+  }
+
+  .col-date {
+    width: 100px;
+  }
+
+  .col-link {
+    width: 50px;
+  }
+
+  th {
+    color: var(--text-muted);
+    font-weight: 500;
+    position: sticky;
+    top: 0;
+    background: var(--surface-card);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  }
+
+  .col-medicine a {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--text-muted);
+    text-underline-offset: 3px;
+  }
+
+  .col-medicine a:hover {
+    color: var(--series-1);
+    text-decoration-color: currentColor;
+  }
+
+  .col-link a {
+    color: var(--series-1);
+    text-decoration: none;
+  }
+
+  .status-pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .status-ongoing {
+    background: color-mix(in srgb, var(--series-1) 16%, transparent);
+    color: var(--series-1);
+  }
+
+  .status-completed {
+    background: color-mix(in srgb, var(--series-3) 16%, transparent);
+    color: var(--series-3);
+  }
+
+  .status-discontinued {
+    background: color-mix(in srgb, var(--series-2) 16%, transparent);
+    color: var(--series-2);
+  }
+
+  #no-results {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    margin: 0;
+  }
+</style>

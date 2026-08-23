@@ -1,0 +1,246 @@
+---
+import Base from "../../layouts/Base.astro";
+import jcas from "../../data/jcas.json";
+
+export function getStaticPaths() {
+  return jcas.map((j) => ({
+    params: { slug: j.slug },
+    props: { jca: j },
+  }));
+}
+
+const { jca } = Astro.props;
+
+const STATUS_COLORS = {
+  Ongoing: "var(--series-1)",
+  Completed: "var(--series-3)",
+  Discontinued: "var(--series-2)",
+};
+
+const fields = [
+  { label: "INN / common name", value: jca.inn },
+  { label: "Substance type", value: jca.substance_type },
+  { label: "Orphan product", value: jca.orphan_product },
+  { label: "Accelerated assessment", value: jca.accelerated_assessment },
+  { label: "Revert to standard timetable", value: jca.revert_to_standard_timetable },
+  { label: "Variation to existing MA", value: jca.variation_to_existing_ma },
+];
+
+const dates = [
+  { label: "EMA validation of MAA", value: jca.date_ema_validation },
+  { label: "Marketing authorisation", value: jca.date_marketing_authorisation },
+  { label: "JCA discontinuation", value: jca.date_jca_discontinuation },
+  { label: "HTACG endorsement of report", value: jca.date_htacg_endorsement },
+  { label: "EC procedural review concluded", value: jca.date_ec_procedural_review },
+  { label: "JCA report published", value: jca.date_report_publication },
+];
+
+const links = [
+  { label: "JCA report", href: jca.link_jca_report },
+  { label: "EMA product information", href: jca.link_ema_product_info },
+  { label: "Union Register entry", href: jca.link_union_register },
+  { label: "Related documents", href: jca.links_relevant_documents },
+];
+---
+
+<Base title={jca.medicine_name ?? jca.inn} description={jca.indication ?? undefined}>
+  <a class="back-link" href={import.meta.env.BASE_URL}>← All JCAs</a>
+
+  <header class="jca-header">
+    <span class="status-pill" style={`background:color-mix(in srgb, ${STATUS_COLORS[jca.status] ?? "var(--series-4)"} 16%, transparent); color:${STATUS_COLORS[jca.status] ?? "var(--series-4)"}`}>
+      {jca.status}
+    </span>
+    <h1>{jca.medicine_name ?? jca.inn}</h1>
+    {jca.indication && <p class="indication">{jca.indication}</p>}
+  </header>
+
+  {jca.status === "Discontinued" && jca.reason_for_discontinuation && (
+    <div class="callout">
+      <strong>Reason for discontinuation:</strong> {jca.reason_for_discontinuation}
+    </div>
+  )}
+
+  <div class="detail-grid">
+    <section class="card">
+      <h2>Assessors</h2>
+      <dl>
+        <div class="row">
+          <dt>Assessor</dt>
+          <dd>{jca.assessor ?? "—"}</dd>
+        </div>
+        <div class="row">
+          <dt>Co-assessor</dt>
+          <dd>{jca.coassessor ?? "—"}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Classification</h2>
+      <dl>
+        {fields.filter((f) => f.value).map((f) => (
+          <div class="row">
+            <dt>{f.label}</dt>
+            <dd>{f.value}</dd>
+          </div>
+        ))}
+        {fields.every((f) => !f.value) && <p class="empty">No classification data available.</p>}
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Timeline</h2>
+      <dl>
+        {dates.filter((d) => d.value).map((d) => (
+          <div class="row">
+            <dt>{d.label}</dt>
+            <dd>{d.value}</dd>
+          </div>
+        ))}
+        {dates.every((d) => !d.value) && <p class="empty">No dates available yet.</p>}
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Links</h2>
+      {links.some((l) => l.href) ? (
+        <ul class="link-list">
+          {links.filter((l) => l.href).map((l) => (
+            <li><a href={l.href} target="_blank" rel="noopener">{l.label} ↗</a></li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">No external documents linked yet.</p>
+      )}
+    </section>
+  </div>
+</Base>
+
+<style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+
+  .back-link:hover {
+    color: var(--text-primary);
+  }
+
+  .jca-header {
+    margin-bottom: 24px;
+  }
+
+  .status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 26px;
+    margin: 0 0 8px;
+  }
+
+  .indication {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.5;
+    max-width: 640px;
+    margin: 0;
+  }
+
+  .callout {
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--status-critical) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--status-critical) 30%, transparent);
+    border-radius: var(--radius);
+    font-size: 14px;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .card h2 {
+    font-size: 14px;
+    margin: 0 0 14px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 600;
+  }
+
+  dl {
+    margin: 0;
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gridline);
+    font-size: 13.5px;
+  }
+
+  .row:last-child {
+    border-bottom: none;
+  }
+
+  dt {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    color: var(--text-primary);
+  }
+
+  .empty {
+    color: var(--text-muted);
+    font-size: 13.5px;
+    margin: 0;
+  }
+
+  .link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .link-list a {
+    font-size: 13.5px;
+    color: var(--series-1);
+    text-decoration: none;
+  }
+
+  .link-list a:hover {
+    text-decoration: underline;
+  }
+</style>

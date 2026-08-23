@@ -1,0 +1,31 @@
+---
+const { label, value, accentVar } = Astro.props;
+---
+<div class="stat-tile">
+  <span class="stat-value" style={accentVar ? `color:${accentVar}` : undefined}>{value}</span>
+  <span class="stat-label">{label}</span>
+</div>
+
+<style>
+  .stat-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+</style>

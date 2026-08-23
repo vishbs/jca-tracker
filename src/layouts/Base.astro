@@ -1,0 +1,216 @@
+---
+const { title, description = "Tracking EU Joint Clinical Assessments (JCAs) under Regulation (EU) 2021/2282." } = Astro.props;
+const path = Astro.url.pathname.replace(import.meta.env.BASE_URL, "/");
+const isActive = (p) => (p === "/" ? path === "/" : path.startsWith(p));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title} · EU JCA Tracker</title>
+    <link rel="icon" type="image/svg+xml" href={`data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%A7%AA</text></svg>`} />
+  </head>
+  <body>
+    <div class="site">
+      <header class="site-header">
+        <a class="brand" href={import.meta.env.BASE_URL}>
+          <span class="brand-mark">JCA</span>
+          <span class="brand-name">EU JCA Tracker</span>
+        </a>
+        <nav>
+          <a href={import.meta.env.BASE_URL} class={isActive("/") ? "active" : ""}>All JCAs</a>
+          <a href={`${import.meta.env.BASE_URL}stats/`} class={isActive("/stats") ? "active" : ""}>Charts &amp; stats</a>
+          <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">Official source ↗</a>
+        </nav>
+      </header>
+      <main>
+        <slot />
+      </main>
+      <footer class="site-footer">
+        <p>
+          Unofficial tracker built from the European Commission's public JCA Excel export.
+          Not affiliated with the EU or EMA. See the
+          <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">official source</a>
+          for authoritative data.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: light;
+    --surface-page:    #f9f9f7;
+    --surface-card:     #fcfcfb;
+    --text-primary:    #0b0b0b;
+    --text-secondary:  #52514e;
+    --text-muted:      #898781;
+    --gridline:        #e1e0d9;
+    --baseline:        #c3c2b7;
+    --border:           rgba(11,11,11,0.10);
+
+    --series-1: #2a78d6; /* blue   - assessor / ongoing */
+    --series-2: #eb6834; /* orange - co-assessor / discontinued */
+    --series-3: #1baf7a; /* aqua   - completed */
+    --series-4: #eda100; /* yellow */
+    --series-5: #4a3aa7; /* violet */
+
+    --status-good: #0ca30c;
+    --status-warning: #fab219;
+    --status-serious: #ec835a;
+    --status-critical: #d03b3b;
+
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-page:   #0d0d0d;
+      --surface-card:    #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:          rgba(255,255,255,0.10);
+
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #9085e9;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-page:   #0d0d0d;
+    --surface-card:    #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:          rgba(255,255,255,0.10);
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #9085e9;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--surface-page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .site {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--series-1);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .brand-name {
+    font-size: 16px;
+  }
+
+  nav {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+  }
+
+  nav a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding-bottom: 4px;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav a:hover {
+    color: var(--text-primary);
+  }
+
+  nav a.active {
+    color: var(--text-primary);
+    font-weight: 500;
+    border-bottom-color: var(--series-1);
+  }
+
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  .site-footer {
+    padding: 20px 24px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .site-footer a {
+    color: var(--text-muted);
+  }
+
+  .site-footer p {
+    max-width: 1080px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3 {
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  a {
+    color: var(--series-1);
+  }
+</style>

@@ -1,0 +1,114 @@
+---
+// Horizontal bar chart, one bar per category, each its own categorical color.
+// `rows` = [{ label, value, colorVar }]
+const { title, rows, total } = Astro.props;
+
+const BAR_HEIGHT = 26;
+const GAP_Y = 12;
+const LABEL_W = 120;
+const CHART_W = 260;
+const chartHeight = rows.length * (BAR_HEIGHT + GAP_Y);
+const max = Math.max(1, ...rows.map((r) => r.value));
+---
+
+<figure class="chart-card">
+  <figcaption>
+    <h3>{title}</h3>
+  </figcaption>
+  <svg viewBox={`0 0 ${LABEL_W + CHART_W + 60} ${chartHeight}`} role="img" aria-label={title} class="chart-svg">
+    {rows.map((row, i) => {
+      const y = i * (BAR_HEIGHT + GAP_Y);
+      const w = Math.max(0, (row.value / max) * CHART_W);
+      const pct = total ? Math.round((row.value / total) * 100) : null;
+      return (
+        <g>
+          <text x={LABEL_W - 10} y={y + BAR_HEIGHT / 2} dy="0.35em" text-anchor="end" class="row-label">{row.label}</text>
+          <rect x={LABEL_W} y={y} width={w} height={BAR_HEIGHT} rx="4" fill={row.colorVar} />
+          <text x={LABEL_W + w + 8} y={y + BAR_HEIGHT / 2} dy="0.35em" class="value-label">
+            {row.value}{pct !== null ? ` (${pct}%)` : ""}
+          </text>
+        </g>
+      );
+    })}
+  </svg>
+  <details class="table-toggle">
+    <summary>View as table</summary>
+    <table>
+      <thead><tr><th>Category</th><th>Count</th>{total && <th>Share</th>}</tr></thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr>
+            <td>{row.label}</td>
+            <td>{row.value}</td>
+            {total && <td>{Math.round((row.value / total) * 100)}%</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </details>
+</figure>
+
+<style>
+  .chart-card {
+    margin: 0;
+    padding: 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  figcaption {
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .chart-svg {
+    width: 100%;
+    height: auto;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .row-label {
+    fill: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .value-label {
+    fill: var(--text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-toggle {
+    margin-top: 14px;
+    font-size: 13px;
+  }
+
+  .table-toggle summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+  }
+
+  th {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+</style>

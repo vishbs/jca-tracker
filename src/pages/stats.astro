@@ -1,0 +1,261 @@
+---
+import Base from "../layouts/Base.astro";
+import StackedBarChart from "../components/StackedBarChart.astro";
+import SimpleBarChart from "../components/SimpleBarChart.astro";
+import StatTile from "../components/StatTile.astro";
+import jcas from "../data/jcas.json";
+
+const STATUS_COLORS = {
+  Ongoing: "var(--series-1)",
+  Completed: "var(--series-3)",
+  Discontinued: "var(--series-2)",
+};
+
+const SUBSTANCE_COLORS = {
+  Chemicals: "var(--series-1)",
+  ATMP: "var(--series-2)",
+  Biologicals: "var(--series-3)",
+};
+
+const total = jcas.length;
+const counts = { Ongoing: 0, Completed: 0, Discontinued: 0 };
+for (const j of jcas) counts[j.status] = (counts[j.status] ?? 0) + 1;
+
+const statusRows = Object.entries(counts)
+  .filter(([, v]) => v > 0)
+  .map(([label, value]) => ({ label, value, colorVar: STATUS_COLORS[label] ?? "var(--series-4)" }));
+
+const substanceCounts = {};
+for (const j of jcas) {
+  if (!j.substance_type) continue;
+  substanceCounts[j.substance_type] = (substanceCounts[j.substance_type] ?? 0) + 1;
+}
+const substanceTotal = Object.values(substanceCounts).reduce((a, b) => a + b, 0);
+const substanceRows = Object.entries(substanceCounts)
+  .sort((a, b) => b[1] - a[1])
+  .map(([label, value]) => ({ label, value, colorVar: SUBSTANCE_COLORS[label] ?? "var(--series-4)" }));
+
+// Country x role (assessor / co-assessor) across all statuses
+const assessorCounts = {};
+const coassessorCounts = {};
+for (const j of jcas) {
+  if (j.assessor_country) assessorCounts[j.assessor_country] = (assessorCounts[j.assessor_country] ?? 0) + 1;
+  if (j.coassessor_country) coassessorCounts[j.coassessor_country] = (coassessorCounts[j.coassessor_country] ?? 0) + 1;
+}
+const countries = Array.from(new Set([...Object.keys(assessorCounts), ...Object.keys(coassessorCounts)]))
+  .sort((a, b) => (assessorCounts[b] ?? 0) + (coassessorCounts[b] ?? 0) - ((assessorCounts[a] ?? 0) + (coassessorCounts[a] ?? 0)));
+
+const countryRows = countries.map((c) => ({
+  label: c,
+  segments: [
+    { value: assessorCounts[c] ?? 0, seriesIndex: 0 },
+    { value: coassessorCounts[c] ?? 0, seriesIndex: 1 },
+  ],
+}));
+const roleSeries = [
+  { key: "assessor", label: "Assessor", colorVar: "var(--series-1)" },
+  { key: "coassessor", label: "Co-assessor", colorVar: "var(--series-2)" },
+];
+
+// Regulatory flags (ongoing JCAs only, where these are tracked)
+const ongoing = jcas.filter((j) => j.status === "Ongoing");
+const orphanCount = ongoing.filter((j) => j.orphan_product === "Y").length;
+const acceleratedCount = ongoing.filter((j) => j.accelerated_assessment === "Y").length;
+
+// Time in assessment (ongoing JCAs with a valid ISO date only — a couple of rows
+// carry a text status like "Under EMA phased review" instead of a date)
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const now = new Date("2026-08-23T00:00:00Z");
+const withDuration = ongoing
+  .filter((j) => j.date_ema_validation && ISO_DATE.test(j.date_ema_validation))
+  .map((j) => ({
+    ...j,
+    daysSinceValidation: Math.round((now - new Date(j.date_ema_validation)) / 86400000),
+  }))
+  .sort((a, b) => b.daysSinceValidation - a.daysSinceValidation);
+const avgDays = withDuration.length
+  ? Math.round(withDuration.reduce((a, j) => a + j.daysSinceValidation, 0) / withDuration.length)
+  : null;
+const longestRunning = withDuration.slice(0, 5);
+---
+
+<Base title="Charts & Stats">
+  <section class="hero">
+    <h1>Charts &amp; stats</h1>
+    <p class="lede">
+      Summary views over the same dataset as the <a href={import.meta.env.BASE_URL}>full JCA table</a>.
+    </p>
+  </section>
+
+  <section class="stat-row">
+    <StatTile label="Total JCAs tracked" value={total} />
+    <StatTile label="Ongoing" value={counts.Ongoing ?? 0} accentVar="var(--series-1)" />
+    <StatTile label="Completed" value={counts.Completed ?? 0} accentVar="var(--series-3)" />
+    <StatTile label="Discontinued" value={counts.Discontinued ?? 0} accentVar="var(--series-2)" />
+  </section>
+
+  <section class="charts-grid">
+    <SimpleBarChart title="Status split" rows={statusRows} total={total} />
+    <SimpleBarChart title="Substance type mix (ongoing & completed)" rows={substanceRows} total={substanceTotal} />
+  </section>
+
+  <section class="charts-grid-full">
+    <StackedBarChart title="JCA appearances by country and role" rows={countryRows} series={roleSeries} />
+  </section>
+
+  <section class="charts-grid">
+    <div class="chart-card flags-card">
+      <h3>Regulatory flags (ongoing JCAs)</h3>
+      <div class="flag-stats">
+        <div class="flag-stat">
+          <span class="flag-value">{orphanCount}<span class="flag-of">/{ongoing.length}</span></span>
+          <span class="flag-label">Orphan product designation</span>
+        </div>
+        <div class="flag-stat">
+          <span class="flag-value">{acceleratedCount}<span class="flag-of">/{ongoing.length}</span></span>
+          <span class="flag-label">Accelerated assessment (Art. 14(9))</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Time in assessment (ongoing JCAs)</h3>
+      {avgDays !== null && <p class="avg-line">Average: <strong>{avgDays} days</strong> since EMA validation ({withDuration.length} of {ongoing.length} with a known date)</p>}
+      <ul class="longest-list">
+        {longestRunning.map((j) => (
+          <li>
+            <a href={`${import.meta.env.BASE_URL}jca/${j.slug}/`}>{j.medicine_name ?? j.inn}</a>
+            <span class="days-badge">{j.daysSinceValidation}d</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    margin-bottom: 32px;
+  }
+
+  .hero h1 {
+    font-size: 28px;
+    margin: 0 0 12px;
+  }
+
+  .lede {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 640px;
+    margin: 0;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .charts-grid-full {
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    margin: 0;
+    padding: 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .chart-card h3 {
+    margin: 0 0 16px;
+    font-size: 15px;
+  }
+
+  .flag-stats {
+    display: flex;
+    gap: 24px;
+  }
+
+  .flag-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .flag-value {
+    font-size: 28px;
+    font-weight: 600;
+  }
+
+  .flag-of {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .flag-label {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    max-width: 160px;
+  }
+
+  .avg-line {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    margin: 0 0 14px;
+  }
+
+  .longest-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .longest-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13.5px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--gridline);
+  }
+
+  .longest-list li:last-child {
+    border-bottom: none;
+  }
+
+  .longest-list a {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .longest-list a:hover {
+    color: var(--series-1);
+  }
+
+  .days-badge {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

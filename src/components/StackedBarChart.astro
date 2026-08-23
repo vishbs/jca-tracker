@@ -1,0 +1,172 @@
+---
+// Horizontal stacked bar chart. `rows` = [{ label, segments: [{value, seriesIndex}] }]
+// `series` = [{ key, label, colorVar }]
+const { title, rows, series, maxValue } = Astro.props;
+
+const BAR_HEIGHT = 22;
+const GAP_Y = 10;
+const GAP_SEG = 2;
+const LABEL_W = 130;
+const CHART_W = 480;
+const chartHeight = rows.length * (BAR_HEIGHT + GAP_Y);
+const max = maxValue ?? Math.max(1, ...rows.map((r) => r.segments.reduce((a, s) => a + s.value, 0)));
+---
+
+<figure class="chart-card">
+  <figcaption>
+    <h3>{title}</h3>
+    {series.length > 1 && (
+      <ul class="legend">
+        {series.map((s) => (
+          <li><span class="swatch" style={`background:${s.colorVar}`}></span>{s.label}</li>
+        ))}
+      </ul>
+    )}
+  </figcaption>
+  <svg viewBox={`0 0 ${LABEL_W + CHART_W + 40} ${chartHeight}`} role="img" aria-label={title} class="chart-svg">
+    {rows.map((row, i) => {
+      const y = i * (BAR_HEIGHT + GAP_Y);
+      let x = LABEL_W;
+      const total = row.segments.reduce((a, s) => a + s.value, 0);
+      return (
+        <g>
+          <text x={LABEL_W - 10} y={y + BAR_HEIGHT / 2} dy="0.35em" text-anchor="end" class="row-label">{row.label}</text>
+          {row.segments.map((seg) => {
+            if (seg.value === 0) return null;
+            const w = Math.max(0, (seg.value / max) * CHART_W - GAP_SEG);
+            const rect = (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={BAR_HEIGHT}
+                rx="4"
+                fill={series[seg.seriesIndex].colorVar}
+              />
+            );
+            x += (seg.value / max) * CHART_W;
+            return rect;
+          })}
+          <text x={LABEL_W + (total / max) * CHART_W + 8} y={y + BAR_HEIGHT / 2} dy="0.35em" class="value-label">{total}</text>
+        </g>
+      );
+    })}
+  </svg>
+  <details class="table-toggle">
+    <summary>View as table</summary>
+    <table>
+      <thead>
+        <tr>
+          <th>Country</th>
+          {series.map((s) => <th>{s.label}</th>)}
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => {
+          const total = row.segments.reduce((a, s) => a + s.value, 0);
+          return (
+            <tr>
+              <td>{row.label}</td>
+              {series.map((s, idx) => <td>{row.segments.find(seg => seg.seriesIndex === idx)?.value ?? 0}</td>)}
+              <td>{total}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </details>
+</figure>
+
+<style>
+  .chart-card {
+    margin: 0;
+    padding: 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .legend {
+    list-style: none;
+    display: flex;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  .chart-svg {
+    width: 100%;
+    height: auto;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .row-label {
+    fill: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .value-label {
+    fill: var(--text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-toggle {
+    margin-top: 14px;
+    font-size: 13px;
+  }
+
+  .table-toggle summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+  }
+
+  th {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+</style>
