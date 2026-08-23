@@ -1,43 +1,39 @@
-# Astro Starter Kit: Minimal
+# EU JCA Tracker
+
+An unofficial, easier-to-read interface for the European Commission's public list of **Joint Clinical Assessments (JCAs)** under HTA Regulation (EU) 2021/2282 — the EU's joint scientific evaluation process for new medicines, where one member state (the assessor) leads and another (the co-assessor) supports.
+
+The EU only publishes this data as a periodically-refreshed Excel file, with no browsable website. This project turns that same data into:
+
+- **A searchable, filterable table** of every ongoing, completed, and discontinued JCA — filter by status, substance type, or country, search by medicine name or indication.
+- **Per-medicine detail pages** with assessor/co-assessor, key dates, regulatory flags (orphan product, accelerated assessment), and links to the official JCA report / EMA product page / Union Register entry.
+- **Charts & stats** — status split, substance type mix, country participation by role, orphan/accelerated assessment counts, and time-in-assessment for ongoing JCAs. Every bar and flag is clickable and opens a popover listing the matching JCAs.
+- **A "data last updated" date**, read directly from the source Excel, so it's always clear how fresh the data is.
+
+Live site: **https://vishbs.github.io/jca-tracker/**
+
+## Data source
+
+Built from the EU's public JCA tracker Excel export:
+https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en
+
+## Updating the data
+
+This project is not affiliated with the EU or EMA and does not auto-fetch new data. To refresh it:
+
+1. Download the latest Excel from the link above and replace `data/hta_ongoing-jca_en.xlsx`.
+2. Regenerate the site's data:
+   ```sh
+   python3 -m venv .venv && .venv/bin/pip install pandas openpyxl
+   .venv/bin/python3 scripts/build_data.py
+   ```
+3. Commit and push — GitHub Actions rebuilds and redeploys automatically.
+
+## Development
 
 ```sh
-npm create astro@latest -- --template minimal
+npm install
+npm run dev       # http://localhost:4321
+npm run build     # outputs to ./dist
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Built with [Astro](https://astro.build) as a static site, deployed to GitHub Pages.
