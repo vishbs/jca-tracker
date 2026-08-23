@@ -4,6 +4,7 @@
 // (in stats.astro) reads them, filters the embedded JCA data, and renders rows here.
 ---
 
+<div id="drilldown-backdrop" class="drilldown-backdrop" hidden></div>
 <div id="drilldown-panel" class="drilldown-panel" hidden>
   <div class="drilldown-header">
     <h3 id="drilldown-title">Filtered JCAs</h3>
@@ -26,11 +27,24 @@
 </div>
 
 <style>
+  .drilldown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: transparent;
+  }
+
   .drilldown-panel {
-    margin-bottom: 24px;
+    position: fixed;
+    z-index: 41;
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(420px, calc(100vh - 32px));
+    display: flex;
+    flex-direction: column;
     background: var(--surface-card);
     border: 1px solid color-mix(in srgb, var(--series-1) 30%, var(--border));
     border-radius: var(--radius);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
     overflow: hidden;
   }
 
@@ -64,9 +78,8 @@
   }
 
   .drilldown-table-wrap {
-    overflow-x: auto;
-    max-height: 360px;
-    overflow-y: auto;
+    overflow: auto;
+    flex: 1;
   }
 
   table {
