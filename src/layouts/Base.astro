@@ -24,6 +24,7 @@ const isActive = (p) => (p === "/" ? path === "/" : path.startsWith(p));
           <a href={import.meta.env.BASE_URL} class={isActive("/") ? "active" : ""}>All JCAs</a>
           <a href={`${import.meta.env.BASE_URL}stats/`} class={isActive("/stats") ? "active" : ""}>Charts &amp; stats</a>
           <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">Official source ↗</a>
+          <a href="https://github.com/vishbs/jca-tracker" target="_blank" rel="noopener">GitHub ↗</a>
         </nav>
       </header>
       <main>
@@ -31,9 +32,8 @@ const isActive = (p) => (p === "/" ? path === "/" : path.startsWith(p));
       </main>
       <footer class="site-footer">
         <p>
-          Unofficial tracker built from the European Commission's public JCA Excel export.
-          Not affiliated with the EU or EMA. See the
-          <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">official source</a>
+          Unofficial tracker built from the European Commission's public JCA Excel export. Not affiliated with the EU or EMA. See the{" "}
+          <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">official source</a>{" "}
           for authoritative data.
         </p>
       </footer>
