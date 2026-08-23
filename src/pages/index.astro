@@ -35,6 +35,13 @@ function primaryLink(j) {
     <StatTile label="Discontinued" value={counts.Discontinued ?? 0} accentVar="var(--series-2)" />
   </section>
 
+  <a class="stats-banner" href={`${import.meta.env.BASE_URL}stats/`}>
+    <span class="stats-banner-text">
+      <strong>Charts &amp; stats</strong> — country breakdowns, substance mix, and time-in-assessment
+    </span>
+    <span class="stats-banner-arrow">→</span>
+  </a>
+
   <section class="table-section">
     <div class="table-header">
       <h2>All JCAs</h2>
@@ -159,6 +166,39 @@ function primaryLink(j) {
     .stat-row { grid-template-columns: repeat(2, 1fr); }
   }
 
+  .stats-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    margin-bottom: 32px;
+    background: color-mix(in srgb, var(--series-1) 8%, var(--surface-card));
+    border: 1px solid color-mix(in srgb, var(--series-1) 25%, var(--border));
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+
+  .stats-banner:hover {
+    background: color-mix(in srgb, var(--series-1) 14%, var(--surface-card));
+  }
+
+  .stats-banner-text {
+    font-size: 13.5px;
+    color: var(--text-primary);
+  }
+
+  .stats-banner-text strong {
+    color: var(--series-1);
+  }
+
+  .stats-banner-arrow {
+    color: var(--series-1);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
   .table-header {
     display: flex;
     flex-direction: column;
@@ -242,7 +282,8 @@ function primaryLink(j) {
   }
 
   .col-link {
-    width: 50px;
+    width: 64px;
+    white-space: nowrap;
   }
 
   th {
