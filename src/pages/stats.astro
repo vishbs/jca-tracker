@@ -3,6 +3,7 @@ import Base from "../layouts/Base.astro";
 import StackedBarChart from "../components/StackedBarChart.astro";
 import SimpleBarChart from "../components/SimpleBarChart.astro";
 import StatTile from "../components/StatTile.astro";
+import DrilldownPanel from "../components/DrilldownPanel.astro";
 import jcas from "../data/jcas.json";
 
 const STATUS_COLORS = {
@@ -23,7 +24,13 @@ for (const j of jcas) counts[j.status] = (counts[j.status] ?? 0) + 1;
 
 const statusRows = Object.entries(counts)
   .filter(([, v]) => v > 0)
-  .map(([label, value]) => ({ label, value, colorVar: STATUS_COLORS[label] ?? "var(--series-4)" }));
+  .map(([label, value]) => ({
+    label,
+    value,
+    colorVar: STATUS_COLORS[label] ?? "var(--series-4)",
+    filterField: "status",
+    filterValue: label,
+  }));
 
 const substanceCounts = {};
 for (const j of jcas) {
@@ -33,7 +40,13 @@ for (const j of jcas) {
 const substanceTotal = Object.values(substanceCounts).reduce((a, b) => a + b, 0);
 const substanceRows = Object.entries(substanceCounts)
   .sort((a, b) => b[1] - a[1])
-  .map(([label, value]) => ({ label, value, colorVar: SUBSTANCE_COLORS[label] ?? "var(--series-4)" }));
+  .map(([label, value]) => ({
+    label,
+    value,
+    colorVar: SUBSTANCE_COLORS[label] ?? "var(--series-4)",
+    filterField: "substance_type",
+    filterValue: label,
+  }));
 
 // Country x role (assessor / co-assessor) across all statuses
 const assessorCounts = {};
@@ -48,8 +61,20 @@ const countries = Array.from(new Set([...Object.keys(assessorCounts), ...Object.
 const countryRows = countries.map((c) => ({
   label: c,
   segments: [
-    { value: assessorCounts[c] ?? 0, seriesIndex: 0 },
-    { value: coassessorCounts[c] ?? 0, seriesIndex: 1 },
+    {
+      value: assessorCounts[c] ?? 0,
+      seriesIndex: 0,
+      filterField: "assessor_country",
+      filterValue: c,
+      filterLabel: `${c} (assessor)`,
+    },
+    {
+      value: coassessorCounts[c] ?? 0,
+      seriesIndex: 1,
+      filterField: "coassessor_country",
+      filterValue: c,
+      filterLabel: `${c} (co-assessor)`,
+    },
   ],
 }));
 const roleSeries = [
@@ -94,6 +119,10 @@ const longestRunning = withDuration.slice(0, 5);
     <StatTile label="Discontinued" value={counts.Discontinued ?? 0} accentVar="var(--series-2)" />
   </section>
 
+  <DrilldownPanel />
+
+  <p class="hint">Tip: click any bar, flag, or list item below to see the matching JCAs.</p>
+
   <section class="charts-grid">
     <SimpleBarChart title="Status split" rows={statusRows} total={total} />
     <SimpleBarChart title="Substance type mix (ongoing & completed)" rows={substanceRows} total={substanceTotal} />
@@ -107,14 +136,28 @@ const longestRunning = withDuration.slice(0, 5);
     <div class="chart-card flags-card">
       <h3>Regulatory flags (ongoing JCAs)</h3>
       <div class="flag-stats">
-        <div class="flag-stat">
+        <button
+          type="button"
+          class="flag-stat clickable"
+          data-filter-field="orphan_product"
+          data-filter-value="Y"
+          data-filter-extra="status:Ongoing"
+          data-filter-label="Orphan product designation (ongoing)"
+        >
           <span class="flag-value">{orphanCount}<span class="flag-of">/{ongoing.length}</span></span>
           <span class="flag-label">Orphan product designation</span>
-        </div>
-        <div class="flag-stat">
+        </button>
+        <button
+          type="button"
+          class="flag-stat clickable"
+          data-filter-field="accelerated_assessment"
+          data-filter-value="Y"
+          data-filter-extra="status:Ongoing"
+          data-filter-label="Accelerated assessment (ongoing)"
+        >
           <span class="flag-value">{acceleratedCount}<span class="flag-of">/{ongoing.length}</span></span>
           <span class="flag-label">Accelerated assessment (Art. 14(9))</span>
-        </div>
+        </button>
       </div>
     </div>
 
@@ -131,7 +174,79 @@ const longestRunning = withDuration.slice(0, 5);
       </ul>
     </div>
   </section>
+
+  <script type="application/json" id="jca-data" set:html={JSON.stringify(jcas)} />
 </Base>
+
+<script define:vars={{ baseUrl: import.meta.env.BASE_URL }}>
+  const jcas = JSON.parse(document.getElementById("jca-data").textContent);
+
+  const panel = document.getElementById("drilldown-panel");
+  const panelTitle = document.getElementById("drilldown-title");
+  const panelRows = document.getElementById("drilldown-rows");
+  const panelClose = document.getElementById("drilldown-close");
+
+  const STATUS_CLASS = {
+    Ongoing: "status-ongoing",
+    Completed: "status-completed",
+    Discontinued: "status-discontinued",
+  };
+
+  function renderResults(matches, label) {
+    panelTitle.textContent = `${label} (${matches.length})`;
+    panelRows.innerHTML = matches
+      .map((j) => {
+        const name = j.medicine_name ?? j.inn ?? "—";
+        const href = `${baseUrl}jca/${j.slug}/`;
+        const statusClass = STATUS_CLASS[j.status] ?? "";
+        return `<tr>
+          <td><a href="${href}">${name}</a></td>
+          <td><span class="status-pill ${statusClass}">${j.status}</span></td>
+          <td>${j.assessor_country ?? "—"}</td>
+          <td>${j.coassessor_country ?? "—"}</td>
+          <td>${j.indication ?? "—"}</td>
+        </tr>`;
+      })
+      .join("");
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleTrigger(el) {
+    const field = el.dataset.filterField;
+    const value = el.dataset.filterValue;
+    const label = el.dataset.filterLabel || `${field}: ${value}`;
+    if (!field || !value) return;
+
+    let matches = jcas.filter((j) => j[field] === value);
+
+    const extra = el.dataset.filterExtra;
+    if (extra) {
+      const [extraField, extraValue] = extra.split(":");
+      matches = matches.filter((j) => j[extraField] === extraValue);
+    }
+
+    renderResults(matches, label);
+  }
+
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest("[data-filter-field]");
+    if (trigger) handleTrigger(trigger);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const trigger = e.target.closest("[data-filter-field]");
+    if (trigger) {
+      e.preventDefault();
+      handleTrigger(trigger);
+    }
+  });
+
+  panelClose.addEventListener("click", () => {
+    panel.hidden = true;
+  });
+</script>
 
 <style>
   .hero {
@@ -155,7 +270,13 @@ const longestRunning = withDuration.slice(0, 5);
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
+  }
+
+  .hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 16px;
   }
 
   .charts-grid {
@@ -196,6 +317,26 @@ const longestRunning = withDuration.slice(0, 5);
     display: flex;
     flex-direction: column;
     gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+  }
+
+  .flag-stat.clickable {
+    cursor: pointer;
+    border-radius: 8px;
+  }
+
+  .flag-stat.clickable:hover .flag-value,
+  .flag-stat.clickable:focus-visible .flag-value {
+    color: var(--series-1);
+  }
+
+  .flag-stat.clickable:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 4px;
   }
 
   .flag-value {

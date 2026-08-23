@@ -1,6 +1,8 @@
 ---
 // Horizontal bar chart, one bar per category, each its own categorical color.
-// `rows` = [{ label, value, colorVar }]
+// `rows` = [{ label, value, colorVar, filterField, filterValue }]
+// When filterField/filterValue are set, bars become clickable and dispatch
+// a "jca-filter" event consumed by the drilldown panel script.
 const { title, rows, total } = Astro.props;
 
 const BAR_HEIGHT = 26;
@@ -20,8 +22,16 @@ const max = Math.max(1, ...rows.map((r) => r.value));
       const y = i * (BAR_HEIGHT + GAP_Y);
       const w = Math.max(0, (row.value / max) * CHART_W);
       const pct = total ? Math.round((row.value / total) * 100) : null;
+      const clickable = row.filterField && row.filterValue;
       return (
-        <g>
+        <g
+          class={clickable ? "bar-group clickable" : "bar-group"}
+          data-filter-field={clickable ? row.filterField : undefined}
+          data-filter-value={clickable ? row.filterValue : undefined}
+          data-filter-label={clickable ? row.label : undefined}
+          role={clickable ? "button" : undefined}
+          tabindex={clickable ? "0" : undefined}
+        >
           <text x={LABEL_W - 10} y={y + BAR_HEIGHT / 2} dy="0.35em" text-anchor="end" class="row-label">{row.label}</text>
           <rect x={LABEL_W} y={y} width={w} height={BAR_HEIGHT} rx="4" fill={row.colorVar} />
           <text x={LABEL_W + w + 8} y={y + BAR_HEIGHT / 2} dy="0.35em" class="value-label">
@@ -81,6 +91,24 @@ const max = Math.max(1, ...rows.map((r) => r.value));
     fill: var(--text-muted);
     font-size: 11px;
     font-variant-numeric: tabular-nums;
+  }
+
+  .bar-group.clickable {
+    cursor: pointer;
+  }
+
+  .bar-group.clickable rect {
+    transition: opacity 0.1s ease;
+  }
+
+  .bar-group.clickable:hover rect,
+  .bar-group.clickable:focus-visible rect {
+    opacity: 0.75;
+  }
+
+  .bar-group.clickable:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
   }
 
   .table-toggle {

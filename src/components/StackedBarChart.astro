@@ -1,6 +1,8 @@
 ---
-// Horizontal stacked bar chart. `rows` = [{ label, segments: [{value, seriesIndex}] }]
+// Horizontal stacked bar chart. `rows` = [{ label, segments: [{value, seriesIndex, filterField, filterValue, filterLabel}] }]
 // `series` = [{ key, label, colorVar }]
+// Segments with filterField/filterValue become clickable and dispatch a
+// "jca-filter" event consumed by the drilldown panel script.
 const { title, rows, series, maxValue } = Astro.props;
 
 const BAR_HEIGHT = 22;
@@ -34,18 +36,28 @@ const max = maxValue ?? Math.max(1, ...rows.map((r) => r.segments.reduce((a, s) 
           {row.segments.map((seg) => {
             if (seg.value === 0) return null;
             const w = Math.max(0, (seg.value / max) * CHART_W - GAP_SEG);
-            const rect = (
-              <rect
-                x={x}
-                y={y}
-                width={w}
-                height={BAR_HEIGHT}
-                rx="4"
-                fill={series[seg.seriesIndex].colorVar}
-              />
-            );
+            const clickable = seg.filterField && seg.filterValue;
+            const segX = x;
             x += (seg.value / max) * CHART_W;
-            return rect;
+            return (
+              <g
+                class={clickable ? "seg-group clickable" : "seg-group"}
+                data-filter-field={clickable ? seg.filterField : undefined}
+                data-filter-value={clickable ? seg.filterValue : undefined}
+                data-filter-label={clickable ? seg.filterLabel : undefined}
+                role={clickable ? "button" : undefined}
+                tabindex={clickable ? "0" : undefined}
+              >
+                <rect
+                  x={segX}
+                  y={y}
+                  width={w}
+                  height={BAR_HEIGHT}
+                  rx="4"
+                  fill={series[seg.seriesIndex].colorVar}
+                />
+              </g>
+            );
           })}
           <text x={LABEL_W + (total / max) * CHART_W + 8} y={y + BAR_HEIGHT / 2} dy="0.35em" class="value-label">{total}</text>
         </g>
@@ -139,6 +151,24 @@ const max = maxValue ?? Math.max(1, ...rows.map((r) => r.segments.reduce((a, s) 
     fill: var(--text-muted);
     font-size: 11px;
     font-variant-numeric: tabular-nums;
+  }
+
+  .seg-group.clickable {
+    cursor: pointer;
+  }
+
+  .seg-group.clickable rect {
+    transition: opacity 0.1s ease;
+  }
+
+  .seg-group.clickable:hover rect,
+  .seg-group.clickable:focus-visible rect {
+    opacity: 0.75;
+  }
+
+  .seg-group.clickable:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
   }
 
   .table-toggle {
