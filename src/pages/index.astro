@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import StatTile from "../components/StatTile.astro";
+import DataFreshness from "../components/DataFreshness.astro";
 import jcas from "../data/jcas.json";
 
 const total = jcas.length;
@@ -26,6 +27,7 @@ function primaryLink(j) {
       HTA Regulation 2021/2282 — built from the European Commission's public{" "}
       <a href="https://health.ec.europa.eu/health-technology-assessment/implementation-regulation-health-technology-assessment/joint-clinical-assessments_en" target="_blank" rel="noopener">JCA tracker Excel file</a>.
     </p>
+    <DataFreshness />
   </section>
 
   <section class="stat-row">

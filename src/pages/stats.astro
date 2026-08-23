@@ -4,6 +4,7 @@ import StackedBarChart from "../components/StackedBarChart.astro";
 import SimpleBarChart from "../components/SimpleBarChart.astro";
 import StatTile from "../components/StatTile.astro";
 import DrilldownPanel from "../components/DrilldownPanel.astro";
+import DataFreshness from "../components/DataFreshness.astro";
 import jcas from "../data/jcas.json";
 
 const STATUS_COLORS = {
@@ -110,6 +111,7 @@ const longestRunning = withDuration.slice(0, 5);
     <p class="lede">
       Summary views over the same dataset as the <a href={import.meta.env.BASE_URL}>full JCA table</a>.
     </p>
+    <DataFreshness />
   </section>
 
   <section class="stat-row">

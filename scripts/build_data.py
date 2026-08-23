@@ -17,8 +17,10 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 XLSX_PATH = ROOT / "data" / "hta_ongoing-jca_en.xlsx"
 OUT_PATH = ROOT / "src" / "data" / "jcas.json"
+META_OUT_PATH = ROOT / "src" / "data" / "meta.json"
 
 HEADER_ROW = 14  # 0-indexed for pandas -> row 15 in Excel
+EXTRACTED_ON_CELL = "A11"  # each sheet has its own "Data extracted on <date>" note here
 SHEETS = {
     "Ongoing JCAs": "Ongoing",
     "Discontinued JCAs": "Discontinued",
@@ -52,6 +54,24 @@ def fmt_date(value):
     if isinstance(value, (datetime, date)):
         return value.strftime("%Y-%m-%d")
     return str(value)
+
+
+def extract_data_extracted_on():
+    """Read the 'Data extracted on <date>' note from each sheet and return the latest."""
+    wb = openpyxl.load_workbook(XLSX_PATH, data_only=True)
+    dates = []
+    for sheet_name in SHEETS:
+        text = wb[sheet_name][EXTRACTED_ON_CELL].value
+        if not isinstance(text, str):
+            continue
+        match = re.search(r"Data extracted on\s+(.+)", text)
+        if not match:
+            continue
+        try:
+            dates.append(datetime.strptime(match.group(1).strip(), "%d %B %Y").date())
+        except ValueError:
+            continue
+    return max(dates) if dates else None
 
 
 def extract_hyperlinks(sheet_name, columns):
@@ -132,11 +152,20 @@ def main():
     with open(OUT_PATH, "w") as f:
         json.dump(all_records, f, indent=2)
 
+    data_extracted_on = extract_data_extracted_on()
+    with open(META_OUT_PATH, "w") as f:
+        json.dump(
+            {"data_extracted_on": data_extracted_on.isoformat() if data_extracted_on else None},
+            f,
+            indent=2,
+        )
+
     counts = {}
     for r in all_records:
         counts[r["status"]] = counts.get(r["status"], 0) + 1
     print(f"Wrote {len(all_records)} JCAs to {OUT_PATH}")
     print(f"  {counts}")
+    print(f"Data extracted on: {data_extracted_on} -> {META_OUT_PATH}")
 
 
 if __name__ == "__main__":

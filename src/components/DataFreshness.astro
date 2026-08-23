@@ -1,0 +1,31 @@
+---
+import meta from "../data/meta.json";
+
+const formatted = meta.data_extracted_on
+  ? new Date(`${meta.data_extracted_on}T00:00:00Z`).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+  : null;
+---
+
+{formatted && (
+  <p class="data-freshness">
+    Data last updated: <strong>{formatted}</strong> (per the EU HTA tracker export)
+  </p>
+)}
+
+<style>
+  .data-freshness {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin: 8px 0 0;
+  }
+
+  .data-freshness strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+</style>
